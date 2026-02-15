@@ -30,6 +30,36 @@
         .animate-bounce {
             animation: bounce 1s infinite;
         }
+        
+        /* Fireworks */
+        .firework {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: firework 1.5s ease-out forwards;
+        }
+        
+        @keyframes firework {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y));
+                opacity: 0;
+            }
+        }
+        
+        .firework-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
@@ -124,6 +154,8 @@
           const [timerActive, setTimerActive] = useState(false);
           const [wrongAnswer, setWrongAnswer] = useState({ player1: false, player2: false });
           const [isFullscreen, setIsFullscreen] = useState(false);
+          const [showFireworks, setShowFireworks] = useState(false);
+          const [showRoundOptions, setShowRoundOptions] = useState(false);
           
           const [editingRound, setEditingRound] = useState(null);
           const [newWord, setNewWord] = useState('');
@@ -208,6 +240,8 @@
             setTimeLeft(45);
             setTimerActive(true);
             setWrongAnswer({ player1: false, player2: false });
+            setShowRoundOptions(false);
+            setShowFireworks(false);
           };
 
           const addRound = () => {
@@ -392,6 +426,84 @@
             }
           };
 
+          const continueToNextRound = () => {
+            setCurrentRound(prev => prev + 1);
+            setPlayer1Input('');
+            setPlayer2Input('');
+            setRoundWinner(null);
+            setTimeLeft(45);
+            setTimerActive(true);
+            setWrongAnswer({ player1: false, player2: false });
+            setShowRoundOptions(false);
+          };
+
+          const endGameEarly = () => {
+            setMode('gameOver');
+            setShowFireworks(true);
+            setTimeout(() => setShowFireworks(false), 5000);
+          };
+
+          const Fireworks = () => {
+            const [particles, setParticles] = React.useState([]);
+
+            React.useEffect(() => {
+              if (!showFireworks) return;
+
+              const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff1493'];
+              const newParticles = [];
+
+              const createFirework = (x, y) => {
+                for (let i = 0; i < 30; i++) {
+                  const angle = (Math.PI * 2 * i) / 30;
+                  const velocity = 100 + Math.random() * 100;
+                  newParticles.push({
+                    id: Math.random(),
+                    x: x,
+                    y: y,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    velocityX: Math.cos(angle) * velocity,
+                    velocityY: Math.sin(angle) * velocity
+                  });
+                }
+              };
+
+              // Create multiple fireworks
+              for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                  const x = Math.random() * window.innerWidth;
+                  const y = Math.random() * (window.innerHeight * 0.6);
+                  createFirework(x, y);
+                }, i * 300);
+              }
+
+              setParticles(newParticles);
+
+              const timer = setTimeout(() => {
+                setParticles([]);
+              }, 5000);
+
+              return () => clearTimeout(timer);
+            }, []);
+
+            return (
+              <div className="firework-container">
+                {particles.map(particle => (
+                  <div
+                    key={particle.id}
+                    className="firework"
+                    style={{
+                      left: particle.x + 'px',
+                      top: particle.y + 'px',
+                      backgroundColor: particle.color,
+                      '--x': particle.velocityX + 'px',
+                      '--y': particle.velocityY + 'px'
+                    }}
+                  />
+                ))}
+              </div>
+            );
+          };
+
           const handleLetterClick = (letter, player) => {
             if (roundWinner) return;
             
@@ -461,15 +573,11 @@
               setTimeout(() => {
                 setShowFeedback(false);
                 if (currentRound < rounds.length - 1) {
-                  setCurrentRound(prev => prev + 1);
-                  setPlayer1Input('');
-                  setPlayer2Input('');
-                  setRoundWinner(null);
-                  setTimeLeft(45);
-                  setTimerActive(true);
-                  setWrongAnswer({ player1: false, player2: false });
+                  setShowRoundOptions(true);
                 } else {
                   setMode('gameOver');
+                  setShowFireworks(true);
+                  setTimeout(() => setShowFireworks(false), 5000);
                 }
               }, 2000);
             } else {
@@ -750,38 +858,41 @@
           if (mode === 'gameOver') {
             const winner = player1Score > player2Score ? 1 : player2Score > player1Score ? 2 : 0;
             return (
-              <div className="min-h-screen bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center relative">
-                  <button
-                    onClick={toggleFullscreen}
-                    className="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 p-2 rounded-lg transition"
-                  >
-                    {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-                  </button>
-                  
-                  <h1 className="text-4xl font-bold mb-4">
-                    {winner === 0 ? 'تعادل! - Tie!' : `الفائز - Winner: Player ${winner}! 🎉`}
-                  </h1>
-                  <div className="text-2xl mb-8">
-                    <div className="text-blue-600 font-bold mb-2">Player 1: {player1Score}</div>
-                    <div className="text-red-600 font-bold">Player 2: {player2Score}</div>
-                  </div>
-                  <div className="flex gap-3 justify-center">
+              <>
+                {showFireworks && <Fireworks />}
+                <div className="min-h-screen bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center relative">
                     <button
-                      onClick={startGame}
-                      className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition"
+                      onClick={toggleFullscreen}
+                      className="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 p-2 rounded-lg transition"
                     >
-                      العب مرة أخرى - Play Again
+                      {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
                     </button>
-                    <button
-                      onClick={() => setMode('dashboard')}
-                      className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition"
-                    >
-                      لوحة المعلم - Dashboard
-                    </button>
+                    
+                    <h1 className="text-4xl font-bold mb-4">
+                      {winner === 0 ? 'تعادل! - Tie! 🎊' : `الفائز - Winner: Player ${winner}! 🎉`}
+                    </h1>
+                    <div className="text-2xl mb-8">
+                      <div className="text-blue-600 font-bold mb-2">Player 1: {player1Score}</div>
+                      <div className="text-red-600 font-bold">Player 2: {player2Score}</div>
+                    </div>
+                    <div className="flex gap-3 justify-center">
+                      <button
+                        onClick={startGame}
+                        className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition"
+                      >
+                        العب مرة أخرى - Play Again
+                      </button>
+                      <button
+                        onClick={() => setMode('dashboard')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition"
+                      >
+                        لوحة المعلم - Dashboard
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             );
           }
 
@@ -847,6 +958,30 @@
                       roundWinner === 1 ? 'bg-blue-500' : roundWinner === 2 ? 'bg-red-500' : 'bg-gray-500'
                     } text-white animate-bounce`}>
                       {roundWinner ? `✓ صحيح! Player ${roundWinner} wins! 🎉` : '⏰ انتهى الوقت - Time\'s Up!'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Round Options Modal */}
+                {showRoundOptions && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center mx-4">
+                      <h2 className="text-3xl font-bold mb-6">🎯 ما التالي؟ - What's Next?</h2>
+                      <p className="text-gray-600 mb-8">هل تريد المتابعة أم إنهاء اللعبة؟</p>
+                      <div className="flex flex-col gap-4">
+                        <button
+                          onClick={continueToNextRound}
+                          className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-xl transition transform hover:scale-105"
+                        >
+                          ▶️ جولة جديدة - New Round
+                        </button>
+                        <button
+                          onClick={endGameEarly}
+                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-8 rounded-xl text-xl transition transform hover:scale-105"
+                        >
+                          🏁 إنهاء اللعبة - End Game
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
