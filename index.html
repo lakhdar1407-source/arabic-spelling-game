@@ -427,7 +427,7 @@
           };
 
           const continueToNextRound = () => {
-            setCurrentRound(prev => prev + 1);
+            setCurrentRound(0);
             setPlayer1Input('');
             setPlayer2Input('');
             setRoundWinner(null);
@@ -573,11 +573,15 @@
               setTimeout(() => {
                 setShowFeedback(false);
                 if (currentRound < rounds.length - 1) {
-                  setShowRoundOptions(true);
+                  setCurrentRound(prev => prev + 1);
+                  setPlayer1Input('');
+                  setPlayer2Input('');
+                  setRoundWinner(null);
+                  setTimeLeft(45);
+                  setTimerActive(true);
+                  setWrongAnswer({ player1: false, player2: false });
                 } else {
-                  setMode('gameOver');
-                  setShowFireworks(true);
-                  setTimeout(() => setShowFireworks(false), 5000);
+                  setShowRoundOptions(true);
                 }
               }, 2000);
             } else {
@@ -966,14 +970,14 @@
                 {showRoundOptions && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center mx-4">
-                      <h2 className="text-3xl font-bold mb-6">🎯 ما التالي؟ - What's Next?</h2>
-                      <p className="text-gray-600 mb-8">هل تريد المتابعة أم إنهاء اللعبة؟</p>
+                      <h2 className="text-3xl font-bold mb-6">🎉 انتهت جميع الكلمات! - All Words Complete!</h2>
+                      <p className="text-gray-600 mb-8">هل تريد لعب جولة جديدة أم إنهاء اللعبة؟<br/>Play a new round or end the game?</p>
                       <div className="flex flex-col gap-4">
                         <button
                           onClick={continueToNextRound}
                           className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-xl transition transform hover:scale-105"
                         >
-                          ▶️ جولة جديدة - New Round
+                          🔄 جولة جديدة - New Round
                         </button>
                         <button
                           onClick={endGameEarly}
